@@ -1,3 +1,28 @@
+<%--
+  #%L
+  RDFGears
+  %%
+  Copyright (C) 2013 WIS group at the TU Delft (http://www.wis.ewi.tudelft.nl/)
+  %%
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+  
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+  
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+  #L%
+  --%>
 <%@page import="com.sun.corba.se.spi.protocol.RequestDispatcherRegistry"%>
 <%@page import="com.sun.corba.se.spi.protocol.RequestDispatcherDefault"%>
 <%@page import="java.io.PrintWriter"%>
@@ -89,11 +114,17 @@
 		</form>
 		
 		<br/><br/>
-		Examples inputs: <br/>
-		&lt;http://dbpedia.org/resource/Delft&gt; <br/>
-		"an apple" <br/>
-		"la pomme"@fr <br/>
-		"1.2"^^&lt;http://www.w3.org/2001/XMLSchema#double&gt; <br/>
+		<p>On this page you can enter the input parameters for a service. All inputs must be specified using RDF types. Which type is needed depends on the parameter of the service.<br />
+To specify a URI use the following format &lt;###&gt;<br />
+<i>Example: &lt;http://dbpedia.org/resource/Delft&gt; </i><br />
+To specify text use "###" <br />
+to specify text in a particular language append the text with '@' and the language code. <br />
+<i>Example: "la pomme"@fr </i><br />
+Numbers can be specified in two ways. Numbers can be typed normally, so without quotes, which works for almost all services.
+Numbers can also be specified with their fully qualified type. <br />
+<i>Example: "1.2"^^&lt;http://www.w3.org/2001/XMLSchema#double&gt; </i><br />
+<i>Example: "10"^^&lt;http://www.w3.org/2001/XMLSchema#integer&gt;</i>
+</p>
 	
 		
     

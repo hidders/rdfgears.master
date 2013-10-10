@@ -37,12 +37,36 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 package nl.tudelft.rdfgears.util;
+
+/*
+ * #%L
+ * RDFGears
+ * %%
+ * Copyright (C) 2013 WIS group at the TU Delft (http://www.wis.ewi.tudelft.nl/)
+ * %%
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ * #L%
+ */
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -52,129 +76,108 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 
 public class XMLUtil {
-	final static Logger logger = LoggerFactory.getLogger(XMLUtil.class);
-	 public static List<Element> getSubElementByName(Element element,String tagName){
-		   ArrayList<Element> result=new ArrayList<Element>();
-		   NodeList childNodes=element.getChildNodes();
-		   for(int i=0;i<childNodes.getLength();i++){
-				switch (childNodes.item(i).getNodeType()){
-					case Node.ELEMENT_NODE:
-						if(((Element)childNodes.item(i)).getTagName().equalsIgnoreCase(tagName))
-							result.add((Element)childNodes.item(i));	
-						break;  
-				}
-		   }
-		   return result;
-	   }
-	   
-	   public static List<Element> getSubElement(Element element){
-		   ArrayList<Element> result=new ArrayList<Element>();
-		   NodeList childNodes=element.getChildNodes();
-		   for(int i=0;i<childNodes.getLength();i++){
-				switch (childNodes.item(i).getNodeType()){
-					case Node.ELEMENT_NODE:
-						result.add((Element)childNodes.item(i));	
-						break;  
-				}
-		   }
-		   return result;
-	   }
-	   
-	   public static Element getFirstSubElement(Element element){
-		   NodeList childNodes=element.getChildNodes();
-		   for(int i=0;i<childNodes.getLength();i++){
-				switch (childNodes.item(i).getNodeType()){
-					case Node.ELEMENT_NODE:
-						return (Element)childNodes.item(i);	
-				}
-		   }
-		   return null;
-	   }
-	   
-	   public static Element getFirstSubElementByName(Element element,String tagName){
-		   NodeList childNodes=element.getChildNodes();
-		   for(int i=0;i<childNodes.getLength();i++){
-				switch (childNodes.item(i).getNodeType()){
-					case Node.ELEMENT_NODE:
-						if(((Element)childNodes.item(i)).getTagName().equalsIgnoreCase(tagName))
-							return (Element)childNodes.item(i);	
-				}
-		   }
-		   return null;
-	   }
-	   
-	   public static Node getFirstChildByType(Element element,short nodeType){
-		   NodeList childNodes=element.getChildNodes();
-		   for(int i=0;i<childNodes.getLength();i++){
-				if (childNodes.item(i).getNodeType()==nodeType){
-					return childNodes.item(i);	
-				}
-		   }
-		   return null;
-	   }
-	   
-	   public static String getTextFromFirstSubEleByName(Element element,String tagName){
-		   List<Element> childEle= getSubElementByName(element, tagName);
-		   for(int i=0;i<childEle.size();i++){
-			   String tmp=getTextData(childEle.get(i));
-			   if(tmp!=null) return tmp;
-		   }
-		   return null;
-	   }
-	   
-	   public static String getTextData(Element element){
-		   NodeList childNodes=element.getChildNodes();
-		   for(int i=0;i<childNodes.getLength();i++){
-				if ((childNodes.item(i).getNodeType()==Node.TEXT_NODE)||(childNodes.item(i).getNodeType()==Node.CDATA_SECTION_NODE)){
-					if(childNodes.item(i)!=null){
-						String tmpStr=((Text)childNodes.item(i)).getWholeText().trim();
-						if(tmpStr.length()>0){
-							return tmpStr;
-						}
-					}
-				}
-		   }
-		   return null;   
-	   }
+    final static Logger logger = LoggerFactory.getLogger(XMLUtil.class);
 
-	   public static Element createElmWithText(Document doc,String tagName,String text){
-		   Element elm =doc.createElement(tagName);
-		   text = text!=null?text.trim():"";
-		   Node node = (text.indexOf('<')>=0 || text.indexOf('\n')>=0)?doc.createCDATASection(text):doc.createTextNode(text);
-		   elm.appendChild(node);
-		   return elm;
-	   }
+    public static List<Element> getSubElementByName(Element element,
+	    String tagName) {
+	ArrayList<Element> result = new ArrayList<Element>();
+	NodeList childNodes = element.getChildNodes();
+	for (int i = 0; i < childNodes.getLength(); i++) {
+	    switch (childNodes.item(i).getNodeType()) {
+	    case Node.ELEMENT_NODE:
+		if (((Element) childNodes.item(i)).getTagName()
+			.equalsIgnoreCase(tagName))
+		    result.add((Element) childNodes.item(i));
+		break;
+	    }
+	}
+	return result;
+    }
 
-//
-//	/**
-//	 * Serialize this node into a String.
-//	 * @param doc
-//	 * @param node
-//	 * @return
-//	 */
-//	public static String serializeNode(Document doc, Node node) {
-//
-//		if(node.getNodeType() != Node.ELEMENT_NODE){
-//			return node.getTextContent();
-//		}
-//		java.io.StringWriter  strWriter =new java.io.StringWriter(); 
-//		try{
-//			Properties props = 
-//				org.apache.xml.serializer.OutputPropertiesFactory.getDefaultMethodProperties(org.apache.xml.serializer.Method.XML);
-//			props.setProperty("omit-xml-declaration", "no");
-//			
-//			
-//			//props.setProperty("indent", "yes"); 
-//			
-//			org.apache.xml.serializer.Serializer ser = org.apache.xml.serializer.SerializerFactory.getSerializer(props);
-//			ser.setWriter(strWriter);
-//			ser.asDOMSerializer().serialize(node!=null?(Element)node:doc.getDocumentElement());
-//			String src = strWriter.getBuffer().toString();
-//			return src;
-//		}	 
-//		catch(java.io.IOException e){
-//			logger.info("problem rendering source",e);
-//		}
-//		return null;
-//	}
+    public static List<Element> getSubElement(Element element) {
+	ArrayList<Element> result = new ArrayList<Element>();
+	NodeList childNodes = element.getChildNodes();
+	for (int i = 0; i < childNodes.getLength(); i++) {
+	    switch (childNodes.item(i).getNodeType()) {
+	    case Node.ELEMENT_NODE:
+		result.add((Element) childNodes.item(i));
+		break;
+	    }
+	}
+	return result;
+    }
+
+    public static Element getFirstSubElement(Element element) {
+	NodeList childNodes = element.getChildNodes();
+	for (int i = 0; i < childNodes.getLength(); i++) {
+	    switch (childNodes.item(i).getNodeType()) {
+	    case Node.ELEMENT_NODE:
+		return (Element) childNodes.item(i);
+	    }
+	}
+	return null;
+    }
+
+    public static Element getFirstSubElementByName(Element element,
+	    String tagName) {
+	NodeList childNodes = element.getChildNodes();
+	for (int i = 0; i < childNodes.getLength(); i++) {
+	    switch (childNodes.item(i).getNodeType()) {
+	    case Node.ELEMENT_NODE:
+		if (((Element) childNodes.item(i)).getTagName()
+			.equalsIgnoreCase(tagName))
+		    return (Element) childNodes.item(i);
+	    }
+	}
+	return null;
+    }
+
+    public static Node getFirstChildByType(Element element, short nodeType) {
+	NodeList childNodes = element.getChildNodes();
+	for (int i = 0; i < childNodes.getLength(); i++) {
+	    if (childNodes.item(i).getNodeType() == nodeType) {
+		return childNodes.item(i);
+	    }
+	}
+	return null;
+    }
+
+    public static String getTextFromFirstSubEleByName(Element element,
+	    String tagName) {
+	List<Element> childEle = getSubElementByName(element, tagName);
+	for (int i = 0; i < childEle.size(); i++) {
+	    String tmp = getTextData(childEle.get(i));
+	    if (tmp != null)
+		return tmp;
+	}
+	return null;
+    }
+
+    public static String getTextData(Element element) {
+	NodeList childNodes = element.getChildNodes();
+	for (int i = 0; i < childNodes.getLength(); i++) {
+	    if ((childNodes.item(i).getNodeType() == Node.TEXT_NODE)
+		    || (childNodes.item(i).getNodeType() == Node.CDATA_SECTION_NODE)) {
+		if (childNodes.item(i) != null) {
+		    String tmpStr = ((Text) childNodes.item(i)).getWholeText()
+			    .trim();
+		    if (tmpStr.length() > 0) {
+			return tmpStr;
+		    }
+		}
+	    }
+	}
+	return null;
+    }
+
+    public static Element createElmWithText(Document doc, String tagName,
+	    String text) {
+	Element elm = doc.createElement(tagName);
+	text = text != null ? text.trim() : "";
+	Node node = (text.indexOf('<') >= 0 || text.indexOf('\n') >= 0) ? doc
+		.createCDATASection(text) : doc.createTextNode(text);
+	elm.appendChild(node);
+	return elm;
+    }
+
 }

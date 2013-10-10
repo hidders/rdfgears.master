@@ -1,11 +1,37 @@
 package nl.tudelft.rdfgears.tests;
 
+/*
+ * #%L
+ * RDFGears
+ * %%
+ * Copyright (C) 2013 WIS group at the TU Delft (http://www.wis.ewi.tudelft.nl/)
+ * %%
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ * #L%
+ */
 
+
+import static org.junit.Assert.assertTrue;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-
-import nl.tudelft.rdfgears.engine.Engine;
+import nl.tudelft.rdfgears.engine.ValueFactory;
 import nl.tudelft.rdfgears.rgl.datamodel.type.BagType;
 import nl.tudelft.rdfgears.rgl.datamodel.type.GraphType;
 import nl.tudelft.rdfgears.rgl.datamodel.type.RDFType;
@@ -16,26 +42,22 @@ import nl.tudelft.rdfgears.rgl.datamodel.value.RecordValue;
 import nl.tudelft.rdfgears.rgl.function.core.RecordCreate;
 import nl.tudelft.rdfgears.rgl.function.core.RecordProject;
 import nl.tudelft.rdfgears.rgl.function.obsolete.JaroSimilarityFunction;
-import nl.tudelft.rdfgears.rgl.function.sparql.SPARQLFunction;
 import nl.tudelft.rdfgears.rgl.function.obsolete.MaxVal2;
+import nl.tudelft.rdfgears.rgl.function.sparql.SPARQLFunction;
 import nl.tudelft.rdfgears.rgl.workflow.ConstantProcessor;
 import nl.tudelft.rdfgears.rgl.workflow.FunctionProcessor;
 import nl.tudelft.rdfgears.rgl.workflow.Workflow;
 import nl.tudelft.rdfgears.util.row.FieldIndexMapFactory;
 import nl.tudelft.rdfgears.util.row.FieldMappedValueRow;
 import nl.tudelft.rdfgears.util.row.ValueRow;
-
 import org.junit.Before;
 import org.junit.Test;
-
 import tools.Util;
-
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype;
-import static org.junit.Assert.*;
 
 public class TestWorkflowManuallyBuilt {
-	private static ConstantProcessor lit1generator = new ConstantProcessor (Engine.getValueFactory().createLiteralTyped("1.0", XSDDatatype.XSDdouble));
-	private static ConstantProcessor lit2generator = new ConstantProcessor (Engine.getValueFactory().createLiteralTyped("2.0", XSDDatatype.XSDdouble));
+	private static ConstantProcessor lit1generator = new ConstantProcessor (ValueFactory.createLiteralTyped("1.0", XSDDatatype.XSDdouble));
+	private static ConstantProcessor lit2generator = new ConstantProcessor (ValueFactory.createLiteralTyped("2.0", XSDDatatype.XSDdouble));
 	
 	private static ValueRow emptyValueGeneratorRow = new FieldMappedValueRow(FieldIndexMapFactory.create()); // empty! 
 	
@@ -186,7 +208,7 @@ public class TestWorkflowManuallyBuilt {
     	silkFlow.addInputReader(dbpediaPortName, dbpediaSelect_mov.getPort(RecordProject.INPUT_NAME));
     	FunctionProcessor lmdbSelect_dir = createProjector("dir");
     	silkFlow.addInputReader(lmdbPortName, lmdbSelect_dir.getPort(RecordProject.INPUT_NAME));
-    	ConstantProcessor predicateProc = new ConstantProcessor(Engine.getValueFactory().createURI("http://dbpedia.org/ontology/director"));
+    	ConstantProcessor predicateProc = new ConstantProcessor(ValueFactory.createURI("http://dbpedia.org/ontology/director"));
     	
     	RecordCreate recordCreateFunc = new RecordCreate();
     	recordCreateFunc.requireInput("s");

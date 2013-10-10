@@ -1,5 +1,31 @@
 package nl.tudelft.rdfgears.rgl.function.imreal;
 
+/*
+ * #%L
+ * RDFGears
+ * %%
+ * Copyright (C) 2013 WIS group at the TU Delft (http://www.wis.ewi.tudelft.nl/)
+ * %%
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ * #L%
+ */
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -15,7 +41,6 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import nl.tudelft.rdfgears.engine.Engine;
 import nl.tudelft.rdfgears.engine.ValueFactory;
-import nl.tudelft.rdfgears.rgl.datamodel.type.BagType;
 import nl.tudelft.rdfgears.rgl.datamodel.type.RDFType;
 import nl.tudelft.rdfgears.rgl.datamodel.type.RGLType;
 import nl.tudelft.rdfgears.rgl.datamodel.type.RecordType;
@@ -41,8 +66,11 @@ import org.xml.sax.SAXException;
  * This function may be modified to output a record, providing more geonames information
  * available from this service
  * 
- * 
  * @author Jasper
+ * 
+ * edits [Claudia]: agressive caching implemented; anything that rounds to a full degree
+ * is considered to be in the same country, retrieved once (alleviates some pressure on the
+ * geonames call numbers)
  *
  */
 public class CoordinatesToCountry extends SimplyTypedRGLFunction  {
@@ -54,9 +82,6 @@ public class CoordinatesToCountry extends SimplyTypedRGLFunction  {
 	public static final String FIELD_COUNTRY = "country";
 	/* the records we will create contain two fields */
 	private static final FieldIndexMap fiMap = FieldIndexMapFactory.create(FIELD_COUNTRY);
-	
-	
-	
 	
 	static String geonamesServiceUrl = "http://api.geonames.org/countrySubdivision?lat=%s&lng=%s&username=%s";
 	private static HashMap<String, String> countryCache = new HashMap<String, String>();
@@ -96,7 +121,6 @@ public class CoordinatesToCountry extends SimplyTypedRGLFunction  {
 		if (country==null)
 			return ValueFactory.createNull("no country found");
 			
-		
 		ModifiableRecord rec = ValueFactory.createModifiableRecordValue(fiMap);
 		rec.put(FIELD_COUNTRY, ValueFactory.createLiteralPlain(country,  null)); // return literal without language tag
 		return rec;
@@ -134,41 +158,22 @@ public class CoordinatesToCountry extends SimplyTypedRGLFunction  {
 	
 	public String GetCountryForLocation(String longitude, String latitude, String geoNamesUserName) {
 		
-		Location loc = new Location(longitude, latitude);
+		double d1 = Double.parseDouble(longitude);
+		double d2 = Double.parseDouble(latitude);
+		
+		int i_lat = (int)Math.round(d1);
+		int i_lng = (int)Math.round(d2);
+		
+		String key = i_lat+"_"+i_lng;
+
 		String knownLocation;  
 		
-		if(! countryCache.containsKey(loc.toString() )){
+		if(! countryCache.containsKey( key )){
 			knownLocation = downloadCountryForLocation(longitude, latitude, geoNamesUserName);
-			countryCache.put(loc.toString(), knownLocation);
+			countryCache.put(key, knownLocation);
 		}
 		
-		return countryCache.get(loc.toString());
-		
-//		
-//		String result = "";
-//		try {
-//			URL service = new URL(String.format(geonamesServiceUrl, latitude,
-//					longitude, geoNamesUserName));
-//			
-//			Engine.getLogger().warn("Fetching "+service);
-//			
-//			URLConnection con = service.openConnection();
-//			con.connect();
-//			BufferedReader in = new BufferedReader(new InputStreamReader(
-//					con.getInputStream()));
-//			while (in.ready()) {
-//				result += in.readLine();
-//			}
-//			in.close();
-//		} catch (MalformedURLException e) {
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-//
-//		String country = GetCountryFromGeoNamesXML(GetXmlDocumentFromString(result));
-//		countryCache.put(loc, country);
-//		return country;
+		return countryCache.get(key);
 	}
 
 	private static Document GetXmlDocumentFromString(String xml) {
@@ -202,6 +207,7 @@ public class CoordinatesToCountry extends SimplyTypedRGLFunction  {
 		return result;
 	}
 	
+	/*
 	class Location {
 		String latitude;
 		String longitude;
@@ -230,6 +236,7 @@ public class CoordinatesToCountry extends SimplyTypedRGLFunction  {
 		}
 		
 	}
+	*/
 
 }
 

@@ -1,3 +1,0 @@
-unfortunately, there are not unit tests for rdfgears-ui. 
-The DERI pipes tests have been thrown away as they were all broken. 
-Sorry. 

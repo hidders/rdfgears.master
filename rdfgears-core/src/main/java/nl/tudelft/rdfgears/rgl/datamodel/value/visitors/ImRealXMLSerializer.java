@@ -1,20 +1,39 @@
 package nl.tudelft.rdfgears.rgl.datamodel.value.visitors;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
+/*
+ * #%L
+ * RDFGears
+ * %%
+ * Copyright (C) 2013 WIS group at the TU Delft (http://www.wis.ewi.tudelft.nl/)
+ * %%
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ * #L%
+ */
+
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.Iterator;
 import java.util.Set;
 
 import javanet.staxutils.IndentingXMLStreamWriter;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamWriter;
 
-import nl.tudelft.rdfgears.engine.ValueFactory;
 import nl.tudelft.rdfgears.rgl.datamodel.type.BagType;
 import nl.tudelft.rdfgears.rgl.datamodel.type.RGLType;
 import nl.tudelft.rdfgears.rgl.datamodel.type.RecordType;
@@ -26,11 +45,9 @@ import nl.tudelft.rdfgears.rgl.datamodel.value.RGLNull;
 import nl.tudelft.rdfgears.rgl.datamodel.value.RGLValue;
 import nl.tudelft.rdfgears.rgl.datamodel.value.RecordValue;
 import nl.tudelft.rdfgears.rgl.datamodel.value.URIValue;
-import nl.tudelft.rdfgears.rgl.datamodel.value.impl.MemoryLiteralValue;
 import nl.tudelft.rdfgears.rgl.datamodel.value.serialization.rglxml.ValueXMLSerializer;
 import nl.tudelft.rdfgears.rgl.workflow.LazyRGLValue;
 
-import com.hp.hpl.jena.n3.N3JenaWriter;
 import com.hp.hpl.jena.rdf.model.RDFWriter;
 
 
@@ -69,8 +86,10 @@ public class ImRealXMLSerializer extends ValueSerializer {
 		if (getSparqlSelectResultValues(resultType)){
 			serializeAsSparqlResult(value);	
 		} else if(resultType.isGraphType() && !value.isNull()) {
-			RDFWriter rdfWriter = new com.hp.hpl.jena.xmloutput.impl.Basic();
-			rdfWriter.write(value.asGraph().getModel(), rawStream, null);
+			GraphValue asGraph = value.asGraph();
+			RDFWriter rdfWriter = asGraph.getModel().getWriter("RDF/XML-ABBREV");
+			rdfWriter.setProperty("showXmlDeclaration", "true");
+			rdfWriter.write(asGraph.getModel(), rawStream, null);
 		} else {
 			(new ValueXMLSerializer(rawStream)).serialize(value);
 		}
@@ -254,5 +273,5 @@ public class ImRealXMLSerializer extends ValueSerializer {
 		// again with right method signature for OO-dispatching
 		lazyValue.accept(this);
 	}
-
+	
 }

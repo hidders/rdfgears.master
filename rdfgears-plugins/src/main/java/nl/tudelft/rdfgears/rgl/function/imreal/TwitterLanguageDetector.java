@@ -1,222 +1,211 @@
+
 package nl.tudelft.rdfgears.rgl.function.imreal;
 
+/*
+ * #%L
+ * RDFGears
+ * %%
+ * Copyright (C) 2013 WIS group at the TU Delft (http://www.wis.ewi.tudelft.nl/)
+ * %%
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ * #L%
+ */
+
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
+import java.util.HashMap;
 
 import nl.tudelft.rdfgears.engine.Config;
 import nl.tudelft.rdfgears.engine.Engine;
 import nl.tudelft.rdfgears.engine.ValueFactory;
-import nl.tudelft.rdfgears.rgl.datamodel.type.BagType;
+import nl.tudelft.rdfgears.rgl.datamodel.type.GraphType;
 import nl.tudelft.rdfgears.rgl.datamodel.type.RDFType;
 import nl.tudelft.rdfgears.rgl.datamodel.type.RGLType;
-import nl.tudelft.rdfgears.rgl.datamodel.type.RecordType;
-import nl.tudelft.rdfgears.rgl.datamodel.value.LiteralValue;
 import nl.tudelft.rdfgears.rgl.datamodel.value.RGLValue;
-import nl.tudelft.rdfgears.rgl.datamodel.value.impl.ModifiableRecord;
-import nl.tudelft.rdfgears.rgl.datamodel.value.impl.bags.ListBackedBagValue;
 import nl.tudelft.rdfgears.rgl.function.SimplyTypedRGLFunction;
-import nl.tudelft.rdfgears.util.row.FieldIndexMap;
-import nl.tudelft.rdfgears.util.row.FieldIndexMapFactory;
-import nl.tudelft.rdfgears.util.row.TypeRow;
 import nl.tudelft.rdfgears.util.row.ValueRow;
-
-import java.io.BufferedReader;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.io.File;
 
 import com.cybozu.labs.langdetect.Detector;
 import com.cybozu.labs.langdetect.DetectorFactory;
 import com.cybozu.labs.langdetect.LangDetectException;
 
-
-
 /**
- * A function to detect twitter languages based on a twitter username  
- *
+ * A function to detect twitter languages based on a Twitter username.
+ * 
+ * If as input the UUID is provided as input well, the RDF output gives the UUID handle, otherwise it outputs the Twitter handle.
+ * 
+ * @author Claudia
  */
-public class TwitterLanguageDetector extends SimplyTypedRGLFunction  {
-	
+public class TwitterLanguageDetector extends SimplyTypedRGLFunction {
+
 	public static final String INPUT_USERNAME = "username";
-	public static final String FIELD_LANG = "language";
-	public static final String FIELD_SCORE = "score";
+	public static final String INPUT_UUID = "uuid";
+	public static final String INPUT_USEFRIENDSOFUSER = "friendsOfUser";
 	
-	
-	/* profiles can only be loaded once, otherwise the language library crashes. 
-	 * Static because multiple instances of this RGLFunctions may exist. */
-	public static boolean profilesLoaded = false; 
-	
-	
-	/* the records we will create contain two fields */
-	private static final FieldIndexMap fiMap = FieldIndexMapFactory.create(FIELD_LANG, FIELD_SCORE);
-	
-	/* cache the results because we don't want to do too much requests */ 
-	private static final Map<String, RGLValue> cachedUserProfiles = new HashMap<String, RGLValue>(); 
-	private static final Map<String, Integer> cacheTimes = new HashMap<String, Integer>(); 
-	
-	public TwitterLanguageDetector(){
-		this.requireInputType(INPUT_USERNAME, RDFType.getInstance()); 
-		 
+	public static final int MAXHOURS = 48; /* number of hours 'old' data (i.e. tweets retrieved earlier on) are still considered a valid substitute */
+
+	/*
+	 * profiles can only be loaded once, otherwise the language library crashes.
+	 * Static because multiple instances of this RGLFunctions may exist.
+	 */
+	public static boolean profilesLoaded = false;
+
+	public TwitterLanguageDetector() {
+		this.requireInputType(INPUT_USERNAME, RDFType.getInstance());
+		this.requireInputType(INPUT_UUID, RDFType.getInstance());
+		this.requireInputType(INPUT_USEFRIENDSOFUSER, RDFType.getInstance());
 	}
 
 	public RGLType getOutputType() {
-		/* this function returns a type Bag(Record(< language: RDFValue, score: RDFValue >)) */
-		TypeRow typeRow = new TypeRow();
-		typeRow.put(FIELD_LANG, RDFType.getInstance());
-		typeRow.put(FIELD_SCORE, RDFType.getInstance());
-		return BagType.getInstance(RecordType.getInstance(typeRow));
+		return GraphType.getInstance();
 	}
-	
+
 	@Override
 	public RGLValue simpleExecute(ValueRow inputRow) {
-		/* - typechecking guarantees it is an RDFType
-		 * - simpleExecute guarantees it is non-null
-		 * SanityCheck: we must still check whether it is URI or String, 
-		 * because typechecking doesn't distinguish this!  
+		/*
+		 * - typechecking guarantees it is an RDFType - simpleExecute guarantees
+		 * it is non-null SanityCheck: we must still check whether it is URI or
+		 * String, because typechecking doesn't distinguish this!
 		 */
 		RGLValue rdfValue = inputRow.get(INPUT_USERNAME);
-		if (! rdfValue.isLiteral())
-			return ValueFactory.createNull("Cannot handle URI input in "+getFullName());
-		
-		// we are happy, value can be safely cast with .asLiteral(). 
-		String username = rdfValue.asLiteral().getValueString();
-		
-		
-		/* see if cache it outdated */ 
-		boolean useCachedProfile = false;
-		RGLValue userProfile = cachedUserProfiles.get(username); 
-		if (userProfile != null){
-			userProfile = cachedUserProfiles.get(username);
-			int cacheTime = cacheTimes.get(username).intValue();
-			int nowTime = getCurrentTimestamp();
-			useCachedProfile = (nowTime-cacheTime) < 3600;
-		}
-		
-		
-		
-		if (! useCachedProfile  ){
+		if (!rdfValue.isLiteral())
+			return ValueFactory.createNull("Cannot handle URI input in "
+					+ getFullName());
 
-			HashMap<String, Integer> languageMap;
-			try {
-				languageMap = detectLanguage(username);
-			} catch (Exception e) {
-				return ValueFactory.createNull("Error in "+this.getClass().getCanonicalName()+": "+e.getMessage());
+		// we are happy, value can be safely cast with .asLiteral().
+		String username = rdfValue.asLiteral().getValueString().trim();
+
+		RGLValue rdfValue2 = inputRow.get(INPUT_UUID);
+		if (!rdfValue2.isLiteral())
+			return ValueFactory.createNull("Cannot handle URI input in "
+					+ getFullName());
+		String uuid = rdfValue2.asLiteral().getValueString();
+		
+		RGLValue rdfValue3 = inputRow.get(INPUT_USEFRIENDSOFUSER);
+		if (!rdfValue3.isLiteral())
+			return ValueFactory.createNull("Cannot handle URI input in "
+					+ getFullName());
+		String useFriends = rdfValue3.asLiteral().getValueString();		
+		
+		String usernameSplit[] = username.split("\\s+");
+		
+		HashMap<String, Double> languageMap = new HashMap<String,Double>();
+		for(String un : usernameSplit) {
+			try 
+			{
+				HashMap<String,Double> map = detectLanguage(un, useFriends);
+				for(String s : map.keySet()) {
+					double d = map.get(s);
+					if(languageMap.containsKey(s)) {
+						d += languageMap.get(s);
+					}
+					languageMap.put(s, d);
+				}
+			} catch (Exception e) 
+			{
+				return ValueFactory.createNull("Error in "
+						+ this.getClass().getCanonicalName() + ": "
+						+ e.getMessage());
 			}
-			
-			/* We must now convert the languageMap, that was the result of the external 
-			 * 'component', to an RGL value.*/
-			
-			
-			/* Create a list of RGL records.  
-			   could use an ArrayList<RGLValue> as well, but this is recommended
-			   because optimizations can the be exploited */
-			List<RGLValue> list = ValueFactory.createBagBackingList(); 
-			
-			/* now create an RGL Record like 
-			 * 		[language: "en", score: "1.0"^^xsd:double ] 
-			 * for every entry in the language map. */
-			
-			for (String language : languageMap.keySet()){
-				/* instantiate a record */ 
-		    	ModifiableRecord rec = ValueFactory.createModifiableRecordValue(fiMap);
-		    	
-		    	/* We MUST set all fiels of the fieldIndexMap fiMap.
-		    	 * Otherwise RDF gears will crash.
-		    	 *  
-		    	 * If no value is available, do 
-		    	 * 		rec.put(FIELDNAME, ValueFactory.createNull("sorry, no value")); 
-		    	 */
-		    	
-		    	// an RDF literal with string representation of the language, without an RDF language tag
-		    	LiteralValue lang_literal = ValueFactory.createLiteralPlain(language, null); 
-		    	rec.put(FIELD_LANG, lang_literal);
-		    	LiteralValue score_literal = ValueFactory.createLiteralDouble(languageMap.get(language).doubleValue());
-		    	rec.put(FIELD_SCORE, score_literal);
-		    	
-		    	list.add(rec); // add record to the list 
-		    }
-			
-			/* create a Bag that is backed by the list. This approach is simple, 
-			 * but it does not support pipelining.  
-			 */
-			userProfile = new ListBackedBagValue(list);
-			
-			/* store in result & time in cache */ 
-			cachedUserProfiles.put(username,  userProfile);
-			cacheTimes.put(username, getCurrentTimestamp()); 
 		}
 		
-		return userProfile; 
+		/*
+		 * We must now convert the languageMap, that was the result of the
+		 * external 'component', to an RGL value.
+		 */
+
+		RGLValue userProfile = null;
+		try 
+		{
+			userProfile = UserProfileGenerator.generateProfile(this, (uuid.equals("")==true) ? username : uuid, languageMap);
+		} 
+		catch (Exception e) 
+		{
+			return ValueFactory.createNull("Error in "
+					+ this.getClass().getCanonicalName() + ": "
+					+ e.getMessage());
+		}
+		return userProfile;
 	}
-	
-	/* get unix timestamp (seconds) */ 
-	private int getCurrentTimestamp() {
-		return (int) (System.currentTimeMillis() / 1000L);
-	}
+
 
 	/**
 	 * will throw Exception on failure
+	 * 
 	 * @param twitterUser
 	 * @return
-	 * @throws LangDetectException 
-	 * @throws IOException 
+	 * @throws LangDetectException
+	 * @throws IOException
 	 */
-	private HashMap<String, Integer> detectLanguage(String twitterUser) throws LangDetectException, IOException{
+	protected HashMap<String, Double> detectLanguage(String twitterUser, String useFriends)
+			throws LangDetectException, IOException {
 		
-		String getTweetsURL = "https://api.twitter.com/1/statuses/user_timeline.xml?include_entities=false&include_rts=true&screen_name="+twitterUser+"&count=200";
+		HashMap<String,String> tweets = null;
 		
-		/* ************* 
-		 * The dir with the language profiles is assumed to be stored in the tmpdir. 
-		 * As it is read-only, it may be nicer to package it in the jar instead.... 
-		 * But the jar directory contents are not easily listed by the langdetect tool.  
+		if(useFriends.equals("true"))
+			tweets = TweetCollector.getFriendsTweetTextWithDateAsKey(twitterUser,25,true, MAXHOURS);
+		else
+			tweets = TweetCollector.getTweetTextWithDateAsKey(twitterUser, true, MAXHOURS);
+
+		/* *************
+		 * The dir with the language profiles is read from the conf file.
 		 */
-		File profileDir = new File(Config.getWritableDir()+"/imreal-language-profiles"); /* should be cross-platform and work in webapps */
-		if (!profilesLoaded){
+		File profileDir = new File(Config.getLanguageProfilePath());
+	
+		System.err.println("TwitterLanguageDetector: profiles read from "+profileDir);
+												 
+		if (!profilesLoaded) {
 			DetectorFactory.loadProfile(profileDir);
 			profilesLoaded = true;
 		}
-		
-		URL url = new URL(getTweetsURL);	
-		Engine.getLogger().debug("Attempting to retrieve "+url.toString());
-		
-		BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
 
-		String inputLine;
+		HashMap<String, Double> languageMap = new HashMap<String, Double>();
 
-		//TODO: xml parser
-		
-		HashMap<String,Integer> languageMap = new HashMap<String,Integer>();
-
-		while ((inputLine = in.readLine()) != null)
+		for(String key : tweets.keySet())
 		{
-		   	if(inputLine.contains("<text>"))
-		   	{
-		   		String tweet = inputLine;
-		   		tweet = tweet.replace("<tweet>", "");
-		   		tweet = tweet.replace("</text>", "");
-		   	
-			   	//language of the tweet
-			    Detector detect = DetectorFactory.create();
-		        detect.append(inputLine);
-		        String lang = detect.detect();
-		        
-		        if(languageMap.containsKey(lang)==true)
-		        {
-		        	int val = languageMap.get(lang)+1;
-		        	languageMap.put(lang,val);
-		        }
-		        else
-		        	languageMap.put(lang,1);
-		   	}
-		}
+			String tweetText = tweets.get(key);
 
-		in.close();
+			// language of the tweet
+			Detector detect = DetectorFactory.create();
+			detect.append(tweetText);
+			String lang = null;
+			try
+			{
+				lang = detect.detect();
+			}
+			catch(Exception e){System.err.println(e.getMessage());}
+			
+			if (lang!=null && languageMap.containsKey(lang) == true) 
+			{
+				double val = languageMap.get(lang) + 1;
+				languageMap.put(lang, val);
+			} 
+			else
+				languageMap.put(lang, 1.0);
+		}
+		
+		System.err.println("number of detected languages: "+languageMap.size());
+		for(String s : languageMap.keySet()) {
+			System.err.println("language detection: "+s+" => "+languageMap.get(s));
+		}
 		
 		return languageMap;
-			
 	}
-	
 
 }
